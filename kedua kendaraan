@@ -1,0 +1,59 @@
+
+
+import requests
+from bs4 import BeautifulSoup
+
+def scrape_imcdb(make):
+    url = f"http://www.imcdb.org/vehicles_make-{make}.html"
+    headers = {"User-Agent": "Mozilla/5.0"}  # supaya tidak diblokir website
+
+    response = requests.get(url, headers=headers)
+    soup     = BeautifulSoup(response.text, "html.parser")
+
+    mobil = {}
+
+    # ambil semua item dari list di halaman
+    for item in soup.select("li a"):
+        teks = item.get_text(strip=True)
+
+        # ambil angka dalam tanda kurung dari teks setelahnya
+        # format di website: <a>Model Name</a> (1234)
+        parent_text = item.parent.get_text(strip=True)
+
+        import re
+        cocok = re.search(r"\((\d+)\)$", parent_text)
+        if cocok:
+            nama_model  = teks
+            jumlah_film = int(cocok.group(1))
+            mobil[nama_model] = jumlah_film
+
+    return mobil
+
+# =====================
+# JALANKAN & FILTER
+# =====================
+# =====================
+# INPUT DARI USER
+# =====================
+make    = input("Masukkan nama merk mobil (contoh: Ford, Toyota, BMW): ")
+minimal = int(input("Masukkan batas minimal kemunculan film: "))
+
+print(f"\nMengambil data {make} dari IMCDB...")
+data = scrape_imcdb(make)
+
+
+if len(data) == 0:
+    print(f"Merk '{make}' tidak ditemukan. Cek ejaan atau kapitalisasi.")
+else:
+    print(f"Total model ditemukan : {len(data)}")
+    print(f"\n--- Model {make} yang muncul di {minimal}+ film ---\n")
+
+    lolos = {nama: jml for nama, jml in data.items() if jml >= minimal}
+
+    if len(lolos) == 0:
+        print(f"Tidak ada model yang memenuhi batas {minimal} film.")
+    else:
+        for nama, jml in sorted(lolos.items(), key=lambda x: x[1], reverse=True):
+            print(f"{nama:<40} {jml:,} film")
+
+    print(f"\nTotal lolos: {len(lolos)} model dari {len(data)} model {make}")
